@@ -84,6 +84,17 @@
             </feature>
         </config-file>
 
+        <!-- EnodeLinkKit's podspec requires iOS 13.1 (spec.platform = :ios, "13.1"), but
+             cordova-ios's own default deployment target is 13.0 - just low enough that
+             `pod install` fails dependency resolution ("required a higher minimum
+             deployment target"), confirmed by scripts/verify-build.sh / CI. Same fix as
+             the Android Kotlin preferences: graft it into config.xml via config-file
+             rather than relying on a top-level plugin.xml <preference>, which is CLI-
+             variable-only and never reaches config.xml. -->
+        <config-file target="config.xml" parent="/*">
+            <preference name="deployment-target" value="13.1" />
+        </config-file>
+
         <!-- URL scheme declaration for whatever redirectUri the O11 backend supplies when
              it creates the link session (e.g. quatronic://enode/callback) - this plugin
              never builds or reads that value itself, it only takes a linkToken. On
