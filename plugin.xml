@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="com.quatronic.enode"
+        version="1.0.0">
+
+    <name>EnodePlugin</name>
+    <description>OutSystems O11 Cordova plugin for Enode vehicle and charger linking</description>
+    <license>Apache-2.0</license>
+
+    <js-module src="www/EnodePlugin.js" name="EnodePlugin">
+        <clobbers target="cordova.plugins.EnodePlugin" />
+    </js-module>
+
+    <!-- ANDROID -->
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="EnodePlugin">
+                <param name="android-package" value="com.quatronic.enode.EnodePlugin" />
+            </feature>
+        </config-file>
+
+        <!-- Enables cordova-android's built-in Kotlin support (since cordova-android 9.0.0)
+             for EnodePlugin.kt. A top-level plugin.xml <preference> is only for CLI install
+             variables ($VAR$ substitution) - it is NOT copied into the app's config.xml, so
+             it can't be used to turn on a build-time flag like this. Grafting a real
+             <preference> node into config.xml via config-file is what actually reaches the
+             cordovaConfig object that app/build.gradle reads. Confirmed via
+             scripts/verify-build.sh: without this, IS_GRADLE_PLUGIN_KOTLIN_ENABLED stayed
+             false and EnodePlugin.kt would never even be compiled. -->
+        <config-file target="config.xml" parent="/*">
+            <preference name="GradlePluginKotlinEnabled" value="true" />
+            <preference name="GradlePluginKotlinCodeStyle" value="official" />
+            <preference name="GradlePluginKotlinVersion" value="2.0.21" />
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+            <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+            <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+            <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+        </config-file>
+
+        <!--
+          This plugin only takes a linkToken (created by the O11 backend via
+          POST /users/{userId}/link) and hands it to LinkKit - it never builds or sees
+          the redirectUri itself. No intent-filter is registered for it on Android:
+          confirmed by a local test build that the vendor login (e.g. Tesla) happens in
+          LinkKit's own contained WebView, which watches navigation for the redirectUri
+          itself (shouldOverrideUrlLoading-style) rather than leaving the app process - so
+          there is no OS-level Intent to route and no manifest wiring needed for that step.
+          Still untested: the BLE pairing step for vendors that hand off to a vendor app
+          (e.g. Tesla phone-key setup) may involve a real app-switch-and-return. If that
+          turns out to need a redirect back into this app, trace the actual outgoing
+          Intent on a device first rather than guessing a manifest shape for it.
+        -->
+
+        <!--
+          LinkKit requires colorPrimary/colorOnPrimary to be defined in the app theme or it
+          fails to work (per Enode docs). Most host app themes already define these standard
+          Material attributes; nothing is injected here to avoid clobbering the host app's
+          theme. If linking fails with a LinkKit theme error, verify the app's base theme
+          defines both attributes.
+        -->
+
+        <framework src="io.enode:linkkit:1.0.8" />
+
+        <!-- target-dir is appended directly under app/src/main/ (not stripped/rewritten),
+             and cordova-android's generated build.gradle adds src/main/kotlin as an extra
+             Kotlin source root when GradlePluginKotlinEnabled is on - confirmed by
+             scripts/verify-build.sh. An earlier "src/com/..." value landed at the bogus
+             app/src/main/src/com/... path, outside any recognized source root. -->
+        <source-file src="src/android/EnodePlugin.kt" target-dir="kotlin/com/quatronic/enode" />
+    </platform>
+
+    <!-- IOS -->
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="EnodePlugin">
+                <param name="ios-package" value="EnodePlugin" />
+            </feature>
+        </config-file>
+
+        <!-- URL scheme declaration for whatever redirectUri the O11 backend supplies when
+             it creates the link session (e.g. quatronic://enode/callback) - this plugin
+             never builds or reads that value itself, it only takes a linkToken. On
+             Android this turned out to be unnecessary for the login step - LinkKit's
+             contained WebView watches for the redirectUri itself without leaving the app
+             process (confirmed by device testing) - so this is kept as a harmless safe
+             default in case an iOS vendor flow behaves differently. No
+             AppDelegate/SceneDelegate code is written for it; verify whether it's actually
+             needed once iOS testing starts, the same way the Android assumption was
+             corrected. -->
+        <config-file target="*-Info.plist" parent="CFBundleURLTypes">
+            <array>
+                <dict>
+                    <key>CFBundleURLName</key>
+                    <string>com.quatronic.enode</string>
+                    <key>CFBundleURLSchemes</key>
+                    <array>
+                        <string>quatronic</string>
+                    </array>
+                </dict>
+            </array>
+        </config-file>
+
+        <config-file target="*-Info.plist" parent="NSBluetoothAlwaysUsageDescription">
+            <string>This app uses Bluetooth to connect to your vehicle or charger.</string>
+        </config-file>
+
+        <podspec>
+            <config>
+                <source url="https://cdn.cocoapods.org/" />
+            </config>
+            <pods use-frameworks="true">
+                <pod name="EnodeLinkKit" git="https://github.com/enode/enode-link-ios.git" tag="1.0.12" />
+            </pods>
+        </podspec>
+
+        <source-file src="src/ios/EnodePlugin.swift" />
+    </platform>
+
+</plugin>
