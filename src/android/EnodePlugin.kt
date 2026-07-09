@@ -50,7 +50,7 @@ class EnodePlugin : CordovaPlugin() {
         try {
             linkToken = args.getString(0)
         } catch (e: Exception) {
-            callbackContext.error(errorResult(e.message ?: "Invalid arguments"))
+            callbackContext.error(errorResult("400", e.message ?: "Invalid arguments"))
             return true
         }
 
