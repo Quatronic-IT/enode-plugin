@@ -33,7 +33,7 @@ class EnodePlugin : CordovaPlugin() {
                     val errorCode = result.data?.getStringExtra(LinkKit.ERROR_CODE)
                     val errorDetails = result.data?.getStringExtra(LinkKit.ERROR_DETAILS)
 
-                    if (errorCode != null) {
+                    if (!errorCode.isNullOrBlank()) {
                         callbackContext.success(errorResult(errorCode, errorDetails))
                     } else {
                         callbackContext.success(cancelledResult())
