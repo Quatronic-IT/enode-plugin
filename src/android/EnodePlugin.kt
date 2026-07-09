@@ -35,10 +35,10 @@ class EnodePlugin : CordovaPlugin() {
 
                     android.util.Log.d("EnodePlugin", "resultCode=${result.resultCode} errorCode='$errorCode' errorDetails='$errorDetails'")
 
-                    if (!errorCode.isNullOrBlank()) {
-                        callbackContext.success(errorResult(errorCode, errorDetails))
-                    } else {
+                    if (errorCode == "USER_INTERACTION") {
                         callbackContext.success(cancelledResult())
+                    } else {
+                        callbackContext.error(errorResult(errorCode ?: "UNKNOWN", errorDetails))
                     }
                 }
             }
