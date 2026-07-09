@@ -17,6 +17,7 @@
         <config-file target="res/xml/config.xml" parent="/*">
             <feature name="EnodePlugin">
                 <param name="android-package" value="com.quatronic.enode.EnodePlugin" />
+                <param name="onload" value="true" />
             </feature>
         </config-file>
 
@@ -42,6 +43,14 @@
             <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+        </config-file>
+
+        <resource-file src="src/android/res/values/enode_themes.xml" target="res/values/enode_themes.xml" />
+
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <activity
+                    android:name="io.enode.link.LinkKit"
+                    android:theme="@style/Theme.EnodePlugin.NoActionBar" />
         </config-file>
 
         <!--

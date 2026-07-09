@@ -29,7 +29,16 @@ class EnodePlugin : CordovaPlugin() {
             pendingCallback = null
             when (result.resultCode) {
                 Activity.RESULT_OK -> callbackContext.success(successResult())
-                else -> callbackContext.success(cancelledResult())
+                else -> {
+                    val errorCode = result.data?.getStringExtra(LinkKit.ERROR_CODE)
+                    val errorDetails = result.data?.getStringExtra(LinkKit.ERROR_DETAILS)
+
+                    if (errorCode != null) {
+                        callbackContext.success(errorResult(errorCode, errorDetails))
+                    } else {
+                        callbackContext.success(cancelledResult())
+                    }
+                }
             }
         }
     }
@@ -60,8 +69,9 @@ class EnodePlugin : CordovaPlugin() {
         put("status", "cancelled")
     }
 
-    private fun errorResult(message: String) = JSONObject().apply {
+    private fun errorResult(code: String, details: String?) = JSONObject().apply {
         put("status", "error")
-        put("message", message)
+        put("code", code)
+        put("message", details ?: "Unknown error")
     }
 }
