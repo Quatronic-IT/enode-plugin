@@ -1,6 +1,6 @@
 <resources>
     <style name="Theme.EnodePlugin.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar" >
-        <item name="colorPrimary">#6750A4</item>
-        <item name="colorSecondary">#625B71</item>
+        <item name="colorPrimary">#4A0091</item>
+        <item name="colorOnPrimary">#999999</item>
     </style>
 </resources>

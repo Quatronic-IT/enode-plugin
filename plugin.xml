@@ -37,7 +37,13 @@
 
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.BLUETOOTH" />
+            <!--
+            Should be the value below, but for testing in Sandbox DEV I had to remove the version cap, due to a conflict with a different package
+            There's little to no implications for not having the max version pin - might flag as a warning when uploading to Google play store
+            Reason is that Android12+ (sdk version 31+) uses the granular permissions below, not BLUETOOTH
             <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+             -->
             <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
             <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
             <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
@@ -101,7 +107,7 @@
              rather than relying on a top-level plugin.xml <preference>, which is CLI-
              variable-only and never reaches config.xml. -->
         <config-file target="config.xml" parent="/*">
-            <preference name="deployment-target" value="13.1" />
+            <preference name="deployment-target" value="14.0" />
         </config-file>
 
         <!-- URL scheme declaration for whatever redirectUri the O11 backend supplies when

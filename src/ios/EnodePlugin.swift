@@ -1,10 +1,19 @@
 import Foundation
+import UIKit
 import LinkKit
 
 @objc(EnodePlugin)
 class EnodePlugin: CDVPlugin {
 
     private var handler: Handler?
+
+    override func pluginInitialize() {
+        // LinkKit has no per-view color API on iOS - it reads tintColor off the app's window
+        // (per Enode's docs), and their own demo sets it once at launch in SceneDelegate
+        // rather than per-presentation. pluginInitialize() is the earliest hook available to
+        // a Cordova plugin, so it's the closest equivalent to that launch-time timing.
+        viewController?.view.window?.tintColor = UIColor(red: 0x4A / 255, green: 0x00 / 255, blue: 0x91 / 255, alpha: 1)
+    }
 
     @objc(openLinkUI:)
     func openLinkUI(command: CDVInvokedUrlCommand) {
@@ -21,7 +30,9 @@ class EnodePlugin: CDVPlugin {
             return
         }
 
-        let handler = Handler(linkToken: linkToken) { [weak self] linkResult in
+        // Match Android's presentation: LinkKit's activity there uses a plain (non-dialog)
+        // NoActionBar theme, so it renders full screen rather than the SDK's default sheet.
+        let handler = Handler(linkToken: linkToken, presentationStyle: .fullScreen) { [weak self] linkResult in
             guard let self = self else { return }
             self.handler = nil
             switch linkResult {
