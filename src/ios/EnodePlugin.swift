@@ -7,47 +7,74 @@ class EnodePlugin: CDVPlugin {
 
     private var handler: Handler?
 
-    override func pluginInitialize() {
-        // LinkKit has no per-view color API on iOS - it reads tintColor off the app's window
-        // (per Enode's docs), and their own demo sets it once at launch in SceneDelegate
-        // rather than per-presentation. pluginInitialize() is the earliest hook available to
-        // a Cordova plugin, so it's the closest equivalent to that launch-time timing.
-        viewController?.view.window?.tintColor = UIColor(red: 0x4A / 255, green: 0x00 / 255, blue: 0x91 / 255, alpha: 1)
-    }
-
     @objc(openLinkUI:)
     func openLinkUI(command: CDVInvokedUrlCommand) {
         guard let linkToken = command.argument(at: 0) as? String else {
             send(error: "Invalid arguments", callbackId: command.callbackId)
             return
         }
-        presentLinkUI(linkToken: linkToken, callbackId: command.callbackId)
+        let themeMode = command.argument(at: 1) as? String ?? "system"
+        presentLinkUI(linkToken: linkToken, themeMode: themeMode, callbackId: command.callbackId)
     }
 
-    private func presentLinkUI(linkToken: String, callbackId: String) {
+    private func presentLinkUI(linkToken: String, themeMode: String, callbackId: String) {
         guard let viewController = self.viewController else {
             send(error: "No view controller available to present Link UI", callbackId: callbackId)
             return
         }
 
+        // Set on the window, not the view controller - matching Enode's own demo, which
+        // sets tintColor on self.window (SceneDelegate), not on a view controller. A
+        // window-level override cascades to everything drawn in it regardless of which
+        // internal view controller LinkKit ends up presenting; a view-controller-level
+        // override only cascades to that object's actual descendants.
+        let window = viewController.view.window
+        let previousStyle = window?.overrideUserInterfaceStyle
+        window?.overrideUserInterfaceStyle = userInterfaceStyle(for: themeMode)
+
+        // Previously set once in pluginInitialize(), matching Enode's own launch-time
+        // demo pattern - but at that point in the Cordova lifecycle the view may not yet
+        // be attached to a window, silently no-oping the assignment via optional
+        // chaining. Moved here to match where overrideUserInterfaceStyle (above) is
+        // confirmed to actually take effect: immediately before presenting, when the
+        // window is guaranteed to be live.
+        let previousTintColor = window?.tintColor
+        window?.tintColor = UIColor(red: 0x4A / 255, green: 0x00 / 255, blue: 0x91 / 255, alpha: 1)
+
         // Match Android's presentation: LinkKit's activity there uses a plain (non-dialog)
         // NoActionBar theme, so it renders full screen rather than the SDK's default sheet.
-        let handler = Handler(linkToken: linkToken, presentationStyle: .fullScreen) { [weak self] linkResult in
+        //
+        // Uses the (LinkResultCode, HumanReadableMessage?) completion overload rather than
+        // the (LinkResult) one - LinkResultCode is String-backed, giving a stable machine-
+        // readable code alongside the message, matching Android's errorCode/message pair.
+        let handler = Handler(linkToken: linkToken, presentationStyle: .fullScreen) { [weak self] resultCode, message in
             guard let self = self else { return }
             self.handler = nil
-            switch linkResult {
-            case .success:
-                self.send(success: callbackId)
-            case .failure(let error):
-                self.handle(error, callbackId: callbackId)
+            if let previousStyle = previousStyle {
+                window?.overrideUserInterfaceStyle = previousStyle
             }
+            window?.tintColor = previousTintColor
+            self.handle(resultCode, message: message, callbackId: callbackId)
         }
         self.handler = handler
         handler.present(from: viewController)
     }
 
-    private func handle(_ error: LinkError, callbackId: String) {
-        switch error {
+    private func userInterfaceStyle(for themeMode: String) -> UIUserInterfaceStyle {
+        switch themeMode {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return .unspecified
+        }
+    }
+
+    private func handle(_ code: LinkResultCode, message: String?, callbackId: String) {
+        switch code {
+        case .success:
+            send(success: callbackId)
         case .cancelledByUser, .dismissedViaDismissFunction:
             sendCancelled(callbackId: callbackId)
         case .earlyExitRequestedFromFrontend:
@@ -58,15 +85,18 @@ class EnodePlugin: CDVPlugin {
             // revisit if O11 ever needs to distinguish this from a plain user cancel.
             sendCancelled(callbackId: callbackId)
         case .missingLinkToken:
-            send(error: "Missing link token", callbackId: callbackId)
+            send(error: message ?? "Missing link token", code: code.rawValue, callbackId: callbackId)
         case .malformedLinkToken:
-            send(error: "Malformed link token", callbackId: callbackId)
-        case .backendError(let message):
-            // HumanReadableMessage's exact shape isn't documented publicly; string
-            // interpolation falls back to its description either way.
-            send(error: "\(message)", callbackId: callbackId)
+            send(error: message ?? "Malformed link token", code: code.rawValue, callbackId: callbackId)
+        case .backendError:
+            send(error: message ?? "Backend error", code: code.rawValue, callbackId: callbackId)
         case .unknown:
-            send(error: "Unknown LinkKit error", callbackId: callbackId)
+            send(error: message ?? "Unknown LinkKit error", code: code.rawValue, callbackId: callbackId)
+        @unknown default:
+            // LinkResultCode is a resilient (library-evolution) enum, so future SDK versions
+            // can add cases without this being a compile error. Fail safe as a generic error
+            // rather than silently mis-mapping an unrecognized code to something else.
+            send(error: message ?? "Unknown LinkKit result", code: code.rawValue, callbackId: callbackId)
         }
     }
 
@@ -84,6 +114,12 @@ class EnodePlugin: CDVPlugin {
 
     private func send(error message: String, callbackId: String) {
         let payload: [String: Any] = ["status": "error", "message": message]
+        let result = CDVPluginResult(status: .error, messageAs: payload)
+        commandDelegate.send(result, callbackId: callbackId)
+    }
+
+    private func send(error message: String, code: String, callbackId: String) {
+        let payload: [String: Any] = ["status": "error", "code": code, "message": message]
         let result = CDVPluginResult(status: .error, messageAs: payload)
         commandDelegate.send(result, callbackId: callbackId)
     }

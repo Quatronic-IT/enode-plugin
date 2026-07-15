@@ -52,6 +52,13 @@
         </config-file>
 
         <resource-file src="src/android/res/values/enode_themes.xml" target="res/values/enode_themes.xml" />
+        <!-- colorSurface/windowBackground here are light-mode values; values-night below
+             provides the dark counterpart. AppCompatDelegate.setDefaultNightMode(), set
+             from themeMode before this Activity launches (see EnodePlugin.kt), is what
+             picks between them - already confirmed working for the LinkKit UI itself, so
+             this loading-screen background now resolves through the same mechanism instead
+             of being hardcoded. -->
+        <resource-file src="src/android/res/values-night/enode_themes.xml" target="res/values-night/enode_themes.xml" />
 
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <activity

@@ -2,7 +2,7 @@
     <style name="Theme.EnodePlugin.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar" >
         <item name="colorPrimary">#4A0091</item>
         <item name="colorOnPrimary">#999999</item>
-        <item name="colorSurface">#FFFFFF</item>
-        <item name="android:windowBackground">#FFFFFF</item>
+        <item name="colorSurface">#121212</item>
+        <item name="android:windowBackground">#121212</item>
     </style>
 </resources>
